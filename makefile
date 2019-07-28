@@ -14,17 +14,17 @@ main: $(OBJS)
 main.o:	main.cpp $(DEPS)
 	$(CC) -c main.cpp
 
+tinyxml2.o: tinyxml2.cpp
+	$(CC) -c tinyxml2.cpp
+
 client: client.o
 	$(CC) -o client $(COBJS)
 
 client.o: client.cpp
 	$(CC) -c client.cpp
 
-tinyxml2.o: tinyxml2.cpp tinyxml2.h
-	$(CC) -c tinyxml2.cpp
-
 # -----
 # clean by removing object files
 
 clean:
-	rm $(OBJS) client.o
+	rm $(OBJS) $(COBJS)

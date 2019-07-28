@@ -13,8 +13,6 @@
 #include <netdb.h> 
 
 
-#include "mySocket.h"
-
 #define SERVER 0
 #define CLIENT 1
 
@@ -27,10 +25,6 @@ void error(const char *msg)
 }
 
 int main(int argc, char *argv[]){
-
-	cout << "Client app ran" << endl;
-	mySocket thisConnection(CLIENT);
-	thisConnection.printTest();
 
 	int sockfd, portno, n;
     struct sockaddr_in serv_addr;

@@ -27,7 +27,7 @@ void setServerAddress(int, char*[], string*, string*);
 void runServer(int, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
-bool parseInput(string);
+int parseInput(string);
 void error(const char *msg)
 {
     perror(msg);
@@ -138,10 +138,9 @@ void runServer(int argc, int passedPortNo) {
 
 	// read from socket
 	tempString = readFromSocket(newsockfd);
-	cout << "parse this ->\n" <<  tempString << endl;
 
 	// parse XML
-	bool invalidXML;
+	int invalidXML;
 	invalidXML = parseInput(tempString);
 	if (!invalidXML) {
 		cout << "XML is valid" << endl;
@@ -183,10 +182,9 @@ void writeToSocket(int newsockfd, string output) {
 	}
 }
 
-bool parseInput(string input) {
-	XMLDocument doc;
-	doc.parse(input.c_str());
-	cout << doc.ErrorID() << endl;
+int parseInput(string input) {
+	tinyxml2::XMLDocument doc;
+	doc.Parse(input.c_str());
 	return doc.ErrorID();
 }
 
