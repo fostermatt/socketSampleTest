@@ -24,6 +24,8 @@ using namespace std;
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
 void runServer(int, int);
+string readFromSocket(int);
+void writeToSocket(int, string);
 void error(const char *msg)
 {
     perror(msg);
@@ -98,6 +100,7 @@ void runServer(int argc, int passedPortNo) {
 	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
 	int n;
+	string tempString;
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) {
@@ -116,6 +119,10 @@ void runServer(int argc, int passedPortNo) {
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
 		error("setsockopt(SO_REUSEADDR) failed");
 	}
+	// allow reusing the port to handle server restarts
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0) {
+		error("setsockopt(SO_REUSEPORT) failed");
+	}
     
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
@@ -127,20 +134,46 @@ void runServer(int argc, int passedPortNo) {
 	if (newsockfd < 0) {
 		error("ERROR on accept");
 	}
-	bzero(buffer,256);
-	n = read(newsockfd,buffer,255);
-	if (n < 0) {
-		error("ERROR reading from socket");
-	}
-	// printf("Here is the message: %s\n",buffer);
-	cout << buffer << endl;
-	n = write(newsockfd,"yass queen\n",12);
+
+	// read from socket
+		// add while loop for n, then append buffer to a string (using stringstream).
+		// c_str() on the stringstream to tinyxml parse, and will need to ask stringstream for the size
+	cout << "calling read function" << endl;
+	tempString = readFromSocket(newsockfd);
+	cout << "back from read function. " <<  tempString << endl;
+
+	// write to socket
+	writeToSocket(newsockfd, "yass queen");
+	close(newsockfd);
+	close(sockfd);
+}
+
+string readFromSocket(int newsockfd) {
+	int n, bufferSize = 4, i = 1;
+	char buffer[bufferSize];
+	string tempString = "";
+	cout << "variables declared in read function" << endl;
+	do{
+		bzero(buffer, bufferSize);
+		n = read(newsockfd, buffer, bufferSize);
+		tempString += string(buffer);
+		if(n < 0) {
+			error("ERROR reading from scoket");
+		}
+		cout << "tempString == " << tempString << endl;
+		cout << "loop #" << i++ << endl;
+	} while (n == bufferSize);
+	return tempString;
+}
+
+void writeToSocket(int newsockfd, string output) {
+	int n;
+	output += "\n";
+	n = write(newsockfd,output.c_str(),(output.size()+2));
 
 	if (n < 0) {
 		error("ERROR writing to socket");
 	}
-	close(newsockfd);
-	close(sockfd);
 }
 
 
