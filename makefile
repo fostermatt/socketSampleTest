@@ -1,9 +1,9 @@
 # Make file for Socket Sample Program
 
-OBJS = main.o mySocket.o
-COBJS = client.o mySocket.o
+OBJS = main.o tinyxml2.o
+COBJS = client.o
 CC = g++
-DEPS = mySocket.h
+DEPS = tinyxml2.h
 
 
 all: main client
@@ -20,8 +20,8 @@ client: client.o
 client.o: client.cpp
 	$(CC) -c client.cpp
 
-mySocket.o: mySocket.cpp $(DEPS)
-	$(CC) -c mySocket.cpp
+tinyxml2.o: tinyxml2.cpp tinyxml2.h
+	$(CC) -c tinyxml2.cpp
 
 # -----
 # clean by removing object files

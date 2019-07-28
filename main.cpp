@@ -12,7 +12,8 @@
 #include <sys/types.h> 
 #include <netinet/in.h>
 
-#include "mySocket.h"
+
+#include "tinyxml2.h"
 
 #define SERVER 0
 #define CLIENT 1
@@ -26,6 +27,7 @@ void setServerAddress(int, char*[], string*, string*);
 void runServer(int, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
+bool parseInput(string);
 void error(const char *msg)
 {
     perror(msg);
@@ -40,8 +42,6 @@ int main(int argc, char * argv[]) {
 	setServerAddress(argc, argv, &serverIp, &serverPort);
 	
 	// Open socket, listen for data
-	// mySocket thisConnection(SERVER);
-	// thisConnection.printTest();
 
 	int portNo = stoi(serverPort);
 	runServer(2, portNo);
@@ -124,10 +124,11 @@ void runServer(int argc, int passedPortNo) {
 		error("setsockopt(SO_REUSEPORT) failed");
 	}
     
-
+	
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 		error("ERROR on binding");
 	}
+	
 	listen(sockfd,5);
 	clilen = sizeof(cli_addr);
 	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -136,32 +137,38 @@ void runServer(int argc, int passedPortNo) {
 	}
 
 	// read from socket
-		// add while loop for n, then append buffer to a string (using stringstream).
-		// c_str() on the stringstream to tinyxml parse, and will need to ask stringstream for the size
-	cout << "calling read function" << endl;
 	tempString = readFromSocket(newsockfd);
-	cout << "back from read function. " <<  tempString << endl;
+	cout << "parse this ->\n" <<  tempString << endl;
+
+	// parse XML
+	bool invalidXML;
+	invalidXML = parseInput(tempString);
+	if (!invalidXML) {
+		cout << "XML is valid" << endl;
+	} else {
+		cout << "Unknown Command" << endl;
+	}
 
 	// write to socket
-	writeToSocket(newsockfd, "yass queen");
+	string writeThis = "received message: \n";
+	writeToSocket(newsockfd, writeThis+tempString);
+
+	// release socket descriptors
 	close(newsockfd);
 	close(sockfd);
 }
 
 string readFromSocket(int newsockfd) {
-	int n, bufferSize = 4, i = 1;
+	int n, bufferSize = 256;
 	char buffer[bufferSize];
 	string tempString = "";
-	cout << "variables declared in read function" << endl;
 	do{
 		bzero(buffer, bufferSize);
 		n = read(newsockfd, buffer, bufferSize);
 		tempString += string(buffer);
 		if(n < 0) {
-			error("ERROR reading from scoket");
+			error("ERROR reading from socket");
 		}
-		cout << "tempString == " << tempString << endl;
-		cout << "loop #" << i++ << endl;
 	} while (n == bufferSize);
 	return tempString;
 }
@@ -169,11 +176,18 @@ string readFromSocket(int newsockfd) {
 void writeToSocket(int newsockfd, string output) {
 	int n;
 	output += "\n";
-	n = write(newsockfd,output.c_str(),(output.size()+2));
+	n = write(newsockfd,output.c_str(),output.size());
 
 	if (n < 0) {
 		error("ERROR writing to socket");
 	}
+}
+
+bool parseInput(string input) {
+	XMLDocument doc;
+	doc.parse(input.c_str());
+	cout << doc.ErrorID() << endl;
+	return doc.ErrorID();
 }
 
 
