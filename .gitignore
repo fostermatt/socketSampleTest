@@ -38,3 +38,5 @@
 # Other
 .DS_Store
 *.rtf
+client
+main
