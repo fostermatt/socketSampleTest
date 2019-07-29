@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/types.h> 
 #include <netinet/in.h>
+#include <queue>
+#include <map>
 
 #include "tinyxml2.h"
 
@@ -20,13 +22,21 @@
 #define PRINTSERVERINFO cout << "Server Address: " << serverIp << ":" << serverPort << endl;
 
 using namespace std;
+using namespace tinyxml2;
+
+enum Commands { Print, Update, Delete };
+
+struct xmlStorageObject {
+	Commands command;
+	queue<map<string, string>> workingQueue;
+};
 
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
 void runServer(int, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
-int parseInput(int, string, XMLDocument);
+// int parseInput(int, string, XMLDocument&);
 void clearTempFiles(int);
 void error(const char *msg)
 {
@@ -132,20 +142,21 @@ void runServer(int argc, int passedPortNo) {
 // determine if data is valid XML
 
 	// parse XML
-	XMLDocument doc;
-	int invalidXML;
-	invalidXML = parseInput(newsockfd, tempString, doc);
-	if (!invalidXML) {
-		// pass to work queue
-		cout << "XML is valid" << endl;
-	} else {
+	XMLDocument *doc = new XMLDocument();
+	doc->Parse(tempString.c_str());
+	queue<XMLDocument*> *workingQueue = new queue<XMLDocument*>;
+	// int invalidXML;
+	// invalidXML = parseInput(newsockfd, tempString, *doc);
+	if (doc->ErrorID()) {
 		cout << "Unknown Command" << endl;
+	} else {
+		// pass to work queue
+		workingQueue->push(doc);
+		cout << "XML is valid" << endl;
 	}
 
 // work queue should parse commands and display to console along with data rows
-	string tempXMLfile = to_string(newsockfd)+".xml";
-	
-	doc.LoadFile(tempXMLfile.c_str());
+	cout << workingQueue->size() << " xml documents to process" << endl; 
 
 // send response to socket
 	// write to socket
@@ -153,8 +164,9 @@ void runServer(int argc, int passedPortNo) {
 	writeToSocket(newsockfd, writeThis+tempString);
 
 
-	// cleanup temp files
-	clearTempFiles(newsockfd);
+	// cleanup memory
+	delete doc;
+	delete workingQueue;
 	// release socket descriptors
 	close(newsockfd);
 	close(sockfd);
@@ -185,15 +197,10 @@ void writeToSocket(int newsockfd, string output) {
 	}
 }
 
-int parseInput(int newsockfd, string input, XMLDocument doc) {
-	// tinyxml2::XMLDocument doc;
-	doc.Parse(input.c_str());
-	if(doc.ErrorID() == 0) {
-		string tempFileName = to_string(newsockfd) + ".xml";
-		doc.SaveFile( tempFileName.c_str() );
-	}
-	return doc.ErrorID();
-}
+// int parseInput(int newsockfd, string input, XMLDocument& doc) {
+// 	doc.Parse(input.c_str());
+// 	return doc.ErrorID();
+// }
 
 void clearTempFiles(int newsockfd) {
 	string tempXMLfile = to_string(newsockfd)+".xml";
