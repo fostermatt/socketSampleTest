@@ -11,33 +11,38 @@
 #include <unistd.h>
 #include <sys/types.h> 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <queue>
 #include <map>
+#include <ctime>
 
 #include "tinyxml2.h"
 
 #define SERVER 0
 #define CLIENT 1
 
-#define PRINTSERVERINFO cout << "Server Address: " << serverIp << ":" << serverPort << endl;
+#define PRINTSERVERINFO cout << "Starting Server at " << serverIp << ":" << serverPort << endl;
 
 using namespace std;
 using namespace tinyxml2;
 
-enum Commands { Print, Update, Delete };
-
 struct xmlStorageObject {
-	Commands command;
-	queue<map<string, string>> workingQueue;
+	string command;
+	map<string, string> data;
 };
+
+queue<XMLDocument*> workingQueue;
 
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
-void runServer(int, int);
+void runServer(int, string, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
 // int parseInput(int, string, XMLDocument&);
-void clearTempFiles(int);
+string processQueue();
+void parseRows(xmlStorageObject*, XMLElement*);
+void printStruct(xmlStorageObject*);
+string createResponse(xmlStorageObject*);
 void error(const char *msg)
 {
     perror(msg);
@@ -49,11 +54,11 @@ int main(int argc, char * argv[]) {
 
 	// Validate commandline inputs and set server IP and port
 	setServerAddress(argc, argv, &serverIp, &serverPort);
-	
+	PRINTSERVERINFO;
 	// Open socket, listen for data
 
 	int portNo = stoi(serverPort);
-	runServer(2, portNo);
+	runServer(2, serverIp, portNo);
 	
 	return 0;
 }
@@ -89,13 +94,7 @@ void setServerAddress(int argc, char * argv[], string* serverIpPointer, string* 
 	}
 }
 
-
-void setBothPortAndIp(char * argv[], string serverIp, string serverPort) {
-	// validate input in correct order and update values
-	
-}
-
-void runServer(int argc, int passedPortNo) {
+void runServer(int argc, string serverIp, int passedPortNo) {
 	int sockfd, newsockfd, portno;
 	socklen_t clilen;
 	char buffer[256];
@@ -111,7 +110,8 @@ void runServer(int argc, int passedPortNo) {
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	portno = passedPortNo;
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	// serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_addr.s_addr = inet_addr(serverIp.c_str());
 	serv_addr.sin_port = htons(portno);
 
 	// allow reusing the address to handle server restarts
@@ -135,7 +135,7 @@ void runServer(int argc, int passedPortNo) {
 	if (newsockfd < 0) {
 		error("ERROR on accept");
 	}
-
+	
 	// read from socket
 	tempString = readFromSocket(newsockfd);
 
@@ -144,29 +144,28 @@ void runServer(int argc, int passedPortNo) {
 	// parse XML
 	XMLDocument *doc = new XMLDocument();
 	doc->Parse(tempString.c_str());
-	queue<XMLDocument*> *workingQueue = new queue<XMLDocument*>;
+	// queue<XMLDocument*> *workingQueue = new queue<XMLDocument*>;
 	// int invalidXML;
 	// invalidXML = parseInput(newsockfd, tempString, *doc);
 	if (doc->ErrorID()) {
 		cout << "Unknown Command" << endl;
+		writeToSocket(newsockfd, "Unknown Command");
 	} else {
 		// pass to work queue
-		workingQueue->push(doc);
-		cout << "XML is valid" << endl;
+		workingQueue.push(doc);
 	}
 
 // work queue should parse commands and display to console along with data rows
-	cout << workingQueue->size() << " xml documents to process" << endl; 
+	// processQueue();
 
 // send response to socket
 	// write to socket
-	string writeThis = "received message: \n";
-	writeToSocket(newsockfd, writeThis+tempString);
+	string writeThis = processQueue();
+	writeToSocket(newsockfd, writeThis);
 
 
 	// cleanup memory
 	delete doc;
-	delete workingQueue;
 	// release socket descriptors
 	close(newsockfd);
 	close(sockfd);
@@ -202,10 +201,79 @@ void writeToSocket(int newsockfd, string output) {
 // 	return doc.ErrorID();
 // }
 
-void clearTempFiles(int newsockfd) {
-	string tempXMLfile = to_string(newsockfd)+".xml";
-	remove(tempXMLfile.c_str());
+string processQueue() {
+	// read from workingQueue
+	XMLDocument* tempDoc = workingQueue.front();
+	workingQueue.pop();
+	xmlStorageObject tempObj;
+
+	// break the doc into struct
+		// process input command
+	XMLElement* getCommand = tempDoc->FirstChildElement()->FirstChildElement( "command" );
+	if (getCommand == 0) { // valid XML but does not include a proper command
+		cout << "Unknown Command" << endl;
+	} else {
+		tempObj.command = getCommand->GetText();
+		// cout << tempObj.command << " <-- command received" << endl;
+	}
+		// process input data
+	XMLElement* getData = tempDoc->FirstChildElement()->FirstChildElement( "data" );
+	const char * first;
+	XMLElement* getRow = getData->FirstChildElement( "row" );
+	// getKey->QueryStringAttribute( "type", &first);
+	// cout << first << endl;
+
+	parseRows(&tempObj, getRow);
+
+	// output to console
+	printStruct(&tempObj);
+	// build response string
+	string responseStr = "<?xml version = '1.0' encoding = 'UTF-8'?>\n";
+	responseStr += createResponse(&tempObj);
+	// cleanup memory, delete the document
+	// return response string
+	return responseStr;
 }
 
+void parseRows(xmlStorageObject *obj, XMLElement *row) {
+	if (row == NULL) {
+		return;
+	}
 
+	const char *key;
+	row->QueryStringAttribute( "type", &key);
+	const char * val = row->GetText();
+	obj->data.emplace(key, val);
+
+	parseRows(obj, row->NextSiblingElement());
+}
+
+void printStruct(xmlStorageObject *obj) {
+	cout << "Command: " << obj->command << endl;
+	map<string, string>::iterator it = obj->data.begin();
+
+	while(it != obj->data.end()) {
+		cout << it->first << " : " << it->second << endl;
+		it++;
+	}
+	cout << endl;
+}
+
+string createResponse(xmlStorageObject *obj) {
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer [80];
+
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
+	strftime (buffer,80,"%F %X",timeinfo);
+	string dt = buffer;
+
+	string temp = 	"<response>\n\t<command>" + obj->command + "<\\command>\n" +
+						"\t<status>Complete<\\status>\n" +
+						"\t<date>" + dt + "<\\date>\n" +
+					"<\\response>\n";
+
+	return temp;
+}
 
