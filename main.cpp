@@ -32,19 +32,18 @@ struct xmlStorageObject {
 };
 
 queue<XMLDocument*> workingQueue;
+int errFlag = 0;
 
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
 void runServer(int, string, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
-// int parseInput(int, string, XMLDocument&);
 string processQueue();
 void parseRows(xmlStorageObject*, XMLElement*);
 void printStruct(xmlStorageObject*);
 string createResponse(xmlStorageObject*);
-void error(const char *msg)
-{
+void error(const char *msg) {
     perror(msg);
     exit(1);
 }
@@ -63,28 +62,30 @@ int main(int argc, char * argv[]) {
 	return 0;
 }
 
+// displayes correct commandline usage and exits application
 void argumentError() {
 	cout << "Usage: \"main -i IP -p Port\"\nOmit either or both for default values" << endl;
 	exit(0);
 }
 
-void setServerAddress(int argc, char * argv[], string* serverIpPointer, string* serverPortPointer){
+// validates commandline input and sets IP and Port when appropriate
+void setServerAddress(int argc, char * argv[], string* serverIp, string* serverPort){
 	switch (argc) {
 		case 1:		// no additional commandline inputs, use defaults
 			break;
 		case 3:		// just ip or port set, use default for the other
 			if (strcmp(argv[1], "-i") == 0) {
-				*serverIpPointer = argv[2];
+				*serverIp = argv[2];
 			} else if (strcmp(argv[1], "-p") == 0) {
-				*serverPortPointer = argv[2];
+				*serverPort = argv[2];
 			} else {
 				argumentError();
 			}
 			break;
 		case 5:		// set input ip and port
 			if (strcmp(argv[1], "-i") == 0 && (strcmp(argv[3], "-p") == 0)) {
-				*serverIpPointer = argv[2];
-				*serverPortPointer = argv[4];
+				*serverIp = argv[2];
+				*serverPort = argv[4];
 			} else {
 				argumentError();
 			}
@@ -94,6 +95,14 @@ void setServerAddress(int argc, char * argv[], string* serverIpPointer, string* 
 	}
 }
 
+/*
+	Server method that sets passed IP and port then opens socket and listens for response
+	- parses the XML and determines if it is valid
+	- adds valid XML to work queue
+	- processes work queue to send command and data to console
+	- sends response XML to client
+	- releases memory and closes sockets
+*/
 void runServer(int argc, string serverIp, int passedPortNo) {
 	int sockfd, newsockfd, portno;
 	socklen_t clilen;
@@ -135,34 +144,31 @@ void runServer(int argc, string serverIp, int passedPortNo) {
 	if (newsockfd < 0) {
 		error("ERROR on accept");
 	}
-	
+
 	// read from socket
 	tempString = readFromSocket(newsockfd);
 
-// determine if data is valid XML
+	// determine if data is valid XML
 
 	// parse XML
 	XMLDocument *doc = new XMLDocument();
 	doc->Parse(tempString.c_str());
-	// queue<XMLDocument*> *workingQueue = new queue<XMLDocument*>;
-	// int invalidXML;
-	// invalidXML = parseInput(newsockfd, tempString, *doc);
 	if (doc->ErrorID()) {
 		cout << "Unknown Command" << endl;
 		writeToSocket(newsockfd, "Unknown Command");
+		errFlag = 1;
 	} else {
 		// pass to work queue
 		workingQueue.push(doc);
 	}
 
 // work queue should parse commands and display to console along with data rows
-	// processQueue();
-
 // send response to socket
 	// write to socket
-	string writeThis = processQueue();
-	writeToSocket(newsockfd, writeThis);
-
+	if(!errFlag){
+		string writeThis = processQueue();
+		writeToSocket(newsockfd, writeThis);
+	}
 
 	// cleanup memory
 	delete doc;
@@ -171,6 +177,7 @@ void runServer(int argc, string serverIp, int passedPortNo) {
 	close(sockfd);
 }
 
+// reads from socket newsockfd and returns results as a string
 string readFromSocket(int newsockfd) {
 	int n, bufferSize = 256;
 	char buffer[bufferSize];
@@ -186,6 +193,7 @@ string readFromSocket(int newsockfd) {
 	return tempString;
 }
 
+// writes output to the socket with newsockfd
 void writeToSocket(int newsockfd, string output) {
 	int n;
 	output += "\n";
@@ -196,11 +204,7 @@ void writeToSocket(int newsockfd, string output) {
 	}
 }
 
-// int parseInput(int newsockfd, string input, XMLDocument& doc) {
-// 	doc.Parse(input.c_str());
-// 	return doc.ErrorID();
-// }
-
+// method to process the workingQueue, errors if command or data tag missing
 string processQueue() {
 	// read from workingQueue
 	XMLDocument* tempDoc = workingQueue.front();
@@ -212,16 +216,27 @@ string processQueue() {
 	XMLElement* getCommand = tempDoc->FirstChildElement()->FirstChildElement( "command" );
 	if (getCommand == 0) { // valid XML but does not include a proper command
 		cout << "Unknown Command" << endl;
+		errFlag = 1;
+		return "Unknown Command";
 	} else {
 		tempObj.command = getCommand->GetText();
-		// cout << tempObj.command << " <-- command received" << endl;
+		if (tempObj.command != "Print" ||
+			tempObj.command != "Update" ||
+			tempObj.command != "Delete") {
+			cout << "Unknown Command" << endl;
+			errFlag = 1;
+			return "Unknown Command";
+		}
 	}
 		// process input data
 	XMLElement* getData = tempDoc->FirstChildElement()->FirstChildElement( "data" );
+	if (getData == 0) {
+		cout << "Invalid XML: Data tag missing" << endl;
+		errFlag = 1;
+		return "Invalid XML: Data tag missing";
+	}
 	const char * first;
 	XMLElement* getRow = getData->FirstChildElement( "row" );
-	// getKey->QueryStringAttribute( "type", &first);
-	// cout << first << endl;
 
 	parseRows(&tempObj, getRow);
 
@@ -230,11 +245,11 @@ string processQueue() {
 	// build response string
 	string responseStr = "<?xml version = '1.0' encoding = 'UTF-8'?>\n";
 	responseStr += createResponse(&tempObj);
-	// cleanup memory, delete the document
 	// return response string
 	return responseStr;
 }
 
+// method to parse rows of XMLElement storing key:value pair in xmlStorageObject map
 void parseRows(xmlStorageObject *obj, XMLElement *row) {
 	if (row == NULL) {
 		return;
@@ -248,17 +263,19 @@ void parseRows(xmlStorageObject *obj, XMLElement *row) {
 	parseRows(obj, row->NextSiblingElement());
 }
 
+// method to print xmlStorageObject to console
 void printStruct(xmlStorageObject *obj) {
 	cout << "Command: " << obj->command << endl;
-	map<string, string>::iterator it = obj->data.begin();
 
-	while(it != obj->data.end()) {
-		cout << it->first << " : " << it->second << endl;
-		it++;
+	cout << "Data:" << endl;
+	for(map<string, string>::iterator it = obj->data.begin(); it != obj->data.end(); it++) {
+		cout << "\t" << it->first << " : " << it->second << endl;
 	}
+
 	cout << endl;
 }
 
+// method to create response xml string from xmlStorageObject
 string createResponse(xmlStorageObject *obj) {
 	time_t rawtime;
 	struct tm * timeinfo;
