@@ -1,6 +1,6 @@
 # Make file for Socket Sample Program
 ifeq ($(UNAME_S),Linux)
-	CC = g++ -std=c++1
+	CC = g++ -std=c++11
 else
 	CC = g++
 endif
