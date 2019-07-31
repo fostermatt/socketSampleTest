@@ -48,7 +48,7 @@ A sample valid XML message will be in the following format:
 [Back to Table of Contents](README.md#table-of-contents)
 ### Compile  
 *requires C++11 or better*  
-To compile just run the `make` command.
+To compile run `make`.
 ### Usage
 Once compiled the executable will run as follows:
 ```
@@ -81,12 +81,12 @@ The server requires valid XML as follows:
   </data>
 </request>
 ```
-There must be a value between the command tags. If the command tags are missing or this no value in the command tags the server will display and return `Unknown Command`  
-There data tags must be present, but are not required to have any values between them. If the data tags are missing the server will display and return the error `Data tag missing`
+There must be a value between the command tags. If the command tags are missing or there is no value in the command tags the server will display and return `Unknown Command`.  
+There must be data tags present, but they are not required to have any values between them. If the data tags are missing the server will display and return the error `Data tag missing`
 ### Expected Output
-When the server starts it will display a message that it has started and the full server address  
-`Starting Server at 127.0.0.1 5000`  
-When an XML message is received the command and data from the message will be displayed
+When the server starts it will display a message that it has started and the full server address:
+`Starting Server at 127.0.0.1 5000`
+When an XML message is received, the command and data from the message will be displayed
 ```
 Command: Print
 Data:
@@ -103,13 +103,16 @@ as well as a response XML message sent to the client
   <date>2019-07-30 11:11:11</date>
 </response>
 ```
-###Details
-At this point the server will sit and wait for another client to connect. Current server architecture will support multiple clients sequentially.  
-To shutdown the server the key command of CTRL-C which will close the sockets and display the shutdown message, `Shutting down server`
+### Details
+At this point the server will sit and wait for another client to connect. Current server architecture will support multiple clients sequentially.
+To shutdown the server the key command of CTRL-C will close the sockets and display the shutdown message, `Shutting down server`.
 ## Comments
-[Back to Table of Contents](README.md#table-of-contents)
-## Contact  
-[Back to Table of Contents](README.md#table-of-contents)
+[Back to Table of Contents](README.md#table-of-contents)  
+
+Next task would be to add threading which would allow multiple simultaneous clients to be processed.
+## Contact
+[Back to Table of Contents](README.md#table-of-contents)  
+
 [matt@fostermatt.com](mailto:matt@fostermatt.com)
 
 
