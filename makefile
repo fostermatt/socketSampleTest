@@ -1,7 +1,11 @@
 # Make file for Socket Sample Program
+ifeq ($(UNAME_S),Linux)
+	CC = g++ -std=c++1
+else
+	CC = g++
+endif
 
 OBJS = main.o tinyxml2.o server.o
-CC = g++
 DEPS = tinyxml2.h server.h
 
 
