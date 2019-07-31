@@ -40,7 +40,6 @@ Server::~Server() {
 void Server::runServer(string serverIp, int passedPortNo) {
 	int clientSockFD, portno;
 	socklen_t clilen;
-	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
 	int n;
 	string tempString;
@@ -111,15 +110,13 @@ void Server::runServer(string serverIp, int passedPortNo) {
 		// close client socket
 		close(clientSockFD);
 	}
-
-	// release socket descriptors
-	close(sockfd);
+	stopServer();
 }
 
+// cleans up open socket for graceful shutdown
 void Server::stopServer() {
 	close(sockfd);
 }
-
 
 // reads from socket clientSockFD and returns results as a string
 string Server::readFromSocket(int inputNewsockfd) {
@@ -157,23 +154,23 @@ string Server::processQueue() {
 
 	// break the doc into struct
 		// process input command
-	XMLElement* getCommand = tempDoc->FirstChildElement()->FirstChildElement( "command" );
-	if (getCommand == 0) { // valid XML but does not include a proper command
+	XMLElement* commandElement = tempDoc->FirstChildElement()->FirstChildElement( "command" );
+	if (commandElement == 0) { // valid XML but does not include a proper command
 		cout << "Unknown Command" << endl;
 		errFlag = 1;
 		return "Unknown Command";
 	} else {
-		tempObj.name = getCommand->GetText();
+		tempObj.name = commandElement->GetText();
 	}
 		// process input data
-	XMLElement* getData = tempDoc->FirstChildElement()->FirstChildElement( "data" );
-	if (getData == 0) {
-		cout << "Invalid XML: Data tag missing" << endl;
+	XMLElement* dataElement = tempDoc->FirstChildElement()->FirstChildElement( "data" );
+	if (dataElement == 0) {
+		cout << "Data tag missing" << endl;
 		errFlag = 1;
-		return "Invalid XML: Data tag missing";
+		return "Data tag missing";
 	}
 	const char * first;
-	XMLElement* getRow = getData->FirstChildElement( "row" );
+	XMLElement* getRow = dataElement->FirstChildElement( "row" );
 
 	parseRows(&tempObj, getRow);
 
@@ -200,7 +197,7 @@ void Server::parseRows(Command *obj, XMLElement *row) {
 	parseRows(obj, row->NextSiblingElement());
 }
 
-// method to print Command to console
+// method to print Command name and data to console
 void Server::printStruct(Command *obj) {
 	cout << "Command: " << obj->name << endl;
 

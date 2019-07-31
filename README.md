@@ -46,15 +46,18 @@ A sample valid XML message will be in the following format:
 ```
 ## Running Instructions
 [Back to Table of Contents](README.md#table-of-contents)
-### Compile
+### Compile  
+*requires C++11 or better*  
 To compile just run the `make` command.
 ### Usage
 Once compiled the executable will run as follows:
 ```
 ./main -i 127.0.0.1 -p 5000
 ```
-Either or both the IP address or port number can be omitted which will result in the default value being used.
+Either or both the IP address and port number can be omitted which will result in the default value being used.
 ### Client  
+*cat and netcat are required for testing*  
+
 The repo includes a shell script that will connect to the default IP and Port then send the included test.xml file.
 To use the shell script run as follows:
 ```
@@ -66,8 +69,62 @@ cat FILE.xml | netcat IPADDRESS PORT
 ```
 ## Implementation
 [Back to Table of Contents](README.md#table-of-contents)
+### Expected Input
+The server requires valid XML as follows:
+```
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<request>
+  <command>Print</command>
+  <data>
+     <row type="name">Mr. Joe Chase</row>
+     <row type="address">123 Anywhere Lane</row>
+  </data>
+</request>
+```
+There must be a value between the command tags. If the command tags are missing or this no value in the command tags the server will display and return `Unknown Command`  
+There data tags must be present, but are not required to have any values between them. If the data tags are missing the server will display and return the error `Data tag missing`
+### Expected Output
+When the server starts it will display a message that it has started and the full server address  
+`Starting Server at 127.0.0.1 5000`  
+When an XML message is received the command and data from the message will be displayed
+```
+Command: Print
+Data:
+    address: 123 Anywhere Lane
+    name: Mr. Joe Chase
+
+```
+as well as a response XML message sent to the client
+```
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<response>
+  <command>Print</command>
+  <status>Complete</status>
+  <date>2019-07-30 11:11:11</date>
+</response>
+```
+###Details
+At this point the server will sit and wait for another client to connect. Current server architecture will support multiple clients sequentially.  
+To shutdown the server the key command of CTRL-C which will close the sockets and display the shutdown message, `Shutting down server`
 ## Comments
 [Back to Table of Contents](README.md#table-of-contents)
 ## Contact  
 [Back to Table of Contents](README.md#table-of-contents)
 [matt@fostermatt.com](mailto:matt@fostermatt.com)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

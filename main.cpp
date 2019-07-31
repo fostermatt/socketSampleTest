@@ -22,7 +22,6 @@ void closeSockets(int sigNum) {
 	exit(sigNum);
 }
 
-
 int main(int argc, char * argv[]) {
 
 	signal(SIGINT, closeSockets);
