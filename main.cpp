@@ -15,24 +15,20 @@
 #include <queue>
 #include <map>
 #include <ctime>
+#include <csignal>
 
 #include "tinyxml2.h"
-
-#define SERVER 0
-#define CLIENT 1
-
-#define PRINTSERVERINFO cout << "Starting Server at " << serverIp << ":" << serverPort << endl;
 
 using namespace std;
 using namespace tinyxml2;
 
-struct xmlStorageObject {
+struct XMLStorageObject {
 	string command;
 	map<string, string> data;
 };
 
 queue<XMLDocument*> workingQueue;
-int errFlag = 0;
+int errFlag = 0, sockfd, newsockfd;
 
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
@@ -40,20 +36,33 @@ void runServer(int, string, int);
 string readFromSocket(int);
 void writeToSocket(int, string);
 string processQueue();
-void parseRows(xmlStorageObject*, XMLElement*);
-void printStruct(xmlStorageObject*);
-string createResponse(xmlStorageObject*);
+void parseRows(XMLStorageObject*, XMLElement*);
+void printStruct(XMLStorageObject*);
+string createResponse(XMLStorageObject*);
+
+void gracefullShutdown(int sigNum) {
+	// release sockets
+	close(newsockfd);
+	close(sockfd);
+}
+
 void error(const char *msg) {
     perror(msg);
     exit(1);
 }
 
+
 int main(int argc, char * argv[]) {
+
+	signal(SIGINT, gracefullShutdown);
+	signal(SIGTERM, gracefullShutdown);
+
+
 	string serverIp = "127.0.0.1", serverPort = "5000";
 
 	// Validate commandline inputs and set server IP and port
 	setServerAddress(argc, argv, &serverIp, &serverPort);
-	PRINTSERVERINFO;
+	cout << "Starting Server at " << serverIp << ":" << serverPort << endl;
 	// Open socket, listen for data
 
 	int portNo = stoi(serverPort);
@@ -65,7 +74,7 @@ int main(int argc, char * argv[]) {
 // displayes correct commandline usage and exits application
 void argumentError() {
 	cout << "Usage: \"main -i IP -p Port\"\nOmit either or both for default values" << endl;
-	exit(0);
+	exit(1);
 }
 
 // validates commandline input and sets IP and Port when appropriate
@@ -104,7 +113,7 @@ void setServerAddress(int argc, char * argv[], string* serverIp, string* serverP
 	- releases memory and closes sockets
 */
 void runServer(int argc, string serverIp, int passedPortNo) {
-	int sockfd, newsockfd, portno;
+	int portno;
 	socklen_t clilen;
 	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
@@ -145,46 +154,49 @@ void runServer(int argc, string serverIp, int passedPortNo) {
 		error("ERROR on accept");
 	}
 
-	// read from socket
-	tempString = readFromSocket(newsockfd);
-
-	// determine if data is valid XML
-
-	// parse XML
-	XMLDocument *doc = new XMLDocument();
-	doc->Parse(tempString.c_str());
-	if (doc->ErrorID()) {
-		cout << "Unknown Command" << endl;
-		writeToSocket(newsockfd, "Unknown Command");
-		errFlag = 1;
-	} else {
-		// pass to work queue
-		workingQueue.push(doc);
+	while(1) {
+			// read from socket
+		tempString = readFromSocket(newsockfd);
+	
+		// determine if data is valid XML
+	
+		// parse XML
+		XMLDocument *doc = new XMLDocument();
+		doc->Parse(tempString.c_str());
+		if (doc->ErrorID()) {
+			cout << "Unknown Command" << endl;
+			writeToSocket(newsockfd, "Unknown Command");
+			errFlag = 1;
+		} else {
+			// pass to work queue
+			workingQueue.push(doc);
+		}
+	
+		// work queue should parse commands and display to console along with data rows
+		// send response to socket
+		// write to socket
+		if(!errFlag){
+			string writeThis = processQueue();
+			writeToSocket(newsockfd, writeThis);
+		}
+	
+		// cleanup memory
+		delete doc;
 	}
 
-// work queue should parse commands and display to console along with data rows
-// send response to socket
-	// write to socket
-	if(!errFlag){
-		string writeThis = processQueue();
-		writeToSocket(newsockfd, writeThis);
-	}
-
-	// cleanup memory
-	delete doc;
 	// release socket descriptors
 	close(newsockfd);
 	close(sockfd);
 }
 
 // reads from socket newsockfd and returns results as a string
-string readFromSocket(int newsockfd) {
+string readFromSocket(int inputNewsockfd) {
 	int n, bufferSize = 256;
 	char buffer[bufferSize];
 	string tempString = "";
 	do{
 		bzero(buffer, bufferSize);
-		n = read(newsockfd, buffer, bufferSize);
+		n = read(inputNewsockfd, buffer, bufferSize);
 		tempString += string(buffer);
 		if(n < 0) {
 			error("ERROR reading from socket");
@@ -194,10 +206,10 @@ string readFromSocket(int newsockfd) {
 }
 
 // writes output to the socket with newsockfd
-void writeToSocket(int newsockfd, string output) {
+void writeToSocket(int inputNewsockfd, string output) {
 	int n;
 	output += "\n";
-	n = write(newsockfd,output.c_str(),output.size());
+	n = write(inputNewsockfd,output.c_str(),output.size());
 
 	if (n < 0) {
 		error("ERROR writing to socket");
@@ -209,7 +221,7 @@ string processQueue() {
 	// read from workingQueue
 	XMLDocument* tempDoc = workingQueue.front();
 	workingQueue.pop();
-	xmlStorageObject tempObj;
+	XMLStorageObject tempObj;
 
 	// break the doc into struct
 		// process input command
@@ -220,13 +232,6 @@ string processQueue() {
 		return "Unknown Command";
 	} else {
 		tempObj.command = getCommand->GetText();
-		if (tempObj.command != "Print" ||
-			tempObj.command != "Update" ||
-			tempObj.command != "Delete") {
-			cout << "Unknown Command" << endl;
-			errFlag = 1;
-			return "Unknown Command";
-		}
 	}
 		// process input data
 	XMLElement* getData = tempDoc->FirstChildElement()->FirstChildElement( "data" );
@@ -249,8 +254,8 @@ string processQueue() {
 	return responseStr;
 }
 
-// method to parse rows of XMLElement storing key:value pair in xmlStorageObject map
-void parseRows(xmlStorageObject *obj, XMLElement *row) {
+// method to parse rows of XMLElement storing key:value pair in XMLStorageObject map
+void parseRows(XMLStorageObject *obj, XMLElement *row) {
 	if (row == NULL) {
 		return;
 	}
@@ -263,8 +268,8 @@ void parseRows(xmlStorageObject *obj, XMLElement *row) {
 	parseRows(obj, row->NextSiblingElement());
 }
 
-// method to print xmlStorageObject to console
-void printStruct(xmlStorageObject *obj) {
+// method to print XMLStorageObject to console
+void printStruct(XMLStorageObject *obj) {
 	cout << "Command: " << obj->command << endl;
 
 	cout << "Data:" << endl;
@@ -275,8 +280,8 @@ void printStruct(xmlStorageObject *obj) {
 	cout << endl;
 }
 
-// method to create response xml string from xmlStorageObject
-string createResponse(xmlStorageObject *obj) {
+// method to create response xml string from XMLStorageObject
+string createResponse(XMLStorageObject *obj) {
 	time_t rawtime;
 	struct tm * timeinfo;
 	char buffer [80];
@@ -294,3 +299,8 @@ string createResponse(xmlStorageObject *obj) {
 	return temp;
 }
 
+void gracefullShutdown(int sigNum) {
+	// release sockets
+	close(newsockfd);
+	close(sockfd);
+}

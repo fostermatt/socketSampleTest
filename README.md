@@ -46,15 +46,28 @@ A sample valid XML message will be in the following format:
 ```
 ## Running Instructions
 [Back to Table of Contents](README.md#table-of-contents)
+### Compile
+To compile just run the `make` command.
 ### Usage
 Once compiled the executable will run as follows:
 ```
 ./main -i 127.0.0.1 -p 5000
 ```
 Either or both the IP address or port number can be omitted which will result in the default value being used.
+### Client  
+The repo includes a shell script that will connect to the default IP and Port then send the included test.xml file.
+To use the shell script run as follows:
+```
+bash client.sh
+```
+To change any of the defaults just run as follows:
+```
+cat FILE.xml | netcat IPADDRESS PORT
+```
 ## Implementation
 [Back to Table of Contents](README.md#table-of-contents)
 ## Comments
 [Back to Table of Contents](README.md#table-of-contents)
 ## Contact
 [Back to Table of Contents](README.md#table-of-contents)
+[matt@fostermatt.com](mailto:matt@fostermatt.com)
