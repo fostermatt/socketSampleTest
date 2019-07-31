@@ -2,12 +2,24 @@
 // Implementation
 // Matt Foster
 // July 2019
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <queue>
+#include <ctime>
+
 
 #include "server.h"
 
 using namespace std;
+using namespace tinyxml2;
 
-queue<XMLDocument*> *workingQueue;
+queue<XMLDocument*> workingQueue;
 
 Server::Server() {
 	errFlag = 0;
@@ -16,13 +28,6 @@ Server::Server() {
 Server::~Server() {
 
 }
-
-// displayes correct commandline usage and exits application
-void Server::argumentError() {
-	cout << "Usage: \"main -i IP -p Port\"\nOmit either or both for default values" << endl;
-	exit(1);
-}
-
 
 /*
 	Server method that sets passed IP and port then opens socket and listens for response
@@ -111,6 +116,11 @@ void Server::runServer(string serverIp, int passedPortNo) {
 	close(sockfd);
 }
 
+void Server::stopServer() {
+	close(sockfd);
+}
+
+
 // reads from socket clientSockFD and returns results as a string
 string Server::readFromSocket(int inputNewsockfd) {
 	int n, bufferSize = 256;
@@ -191,7 +201,7 @@ void Server::parseRows(XMLStorageObject *obj, XMLElement *row) {
 }
 
 // method to print XMLStorageObject to console
-void server::printStruct(XMLStorageObject *obj) {
+void Server::printStruct(XMLStorageObject *obj) {
 	cout << "Command: " << obj->command << endl;
 
 	cout << "Data:" << endl;
@@ -219,4 +229,9 @@ string Server::createResponse(XMLStorageObject *obj) {
 					"<\\response>\n";
 
 	return temp;
+}
+
+void Server::error(const char *msg) {
+    perror(msg);
+    exit(1);
 }

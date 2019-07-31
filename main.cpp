@@ -1,23 +1,25 @@
 // Sockets Sample Program
 // Matt Foster
 // July 2019
-
+#include <csignal>
 #include "server.h"
 
 using namespace std;
 using namespace tinyxml2;
 
+Server myServer;
 void setServerAddress(int, char*[], string*, string*);
 
+// displayes correct commandline usage and exits application
+void argumentError() {
+	cout << "Usage: \"main -i IP -p Port\"\nOmit either or both for default values" << endl;
+	exit(1);
+}
 void closeSockets(int sigNum) {
 	// release sockets
-	close(sockfd);
+	myServer.stopServer();
 	cout << "Shutting down server" << endl;
 	exit(sigNum);
-}
-void error(const char *msg) {
-    perror(msg);
-    exit(1);
 }
 
 
@@ -33,7 +35,7 @@ int main(int argc, char * argv[]) {
 	cout << "Starting Server at " << serverIp << ":" << serverPort << endl;
 
 	int portNo = stoi(serverPort);
-	Server myServer;
+	
 	myServer.runServer(serverIp, portNo);
 	
 	return 0;

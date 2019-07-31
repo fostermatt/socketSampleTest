@@ -5,27 +5,17 @@
 
 #include <iostream>
 #include <string>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h> 
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <queue>
 #include <map>
-#include <ctime>
-#include <csignal>
 
 #include "tinyxml2.h"
 
 using namespace std;
+using namespace tinyxml2;
 
 class Server {
 public:
-	server();
-	~server();
+	Server();
+	~Server();
 	void runServer(string, int);
 	void stopServer();
 private:
@@ -37,11 +27,11 @@ private:
 	int errFlag;
 	int sockfd;
 
-	void argumentError();
 	string readFromSocket(int);
 	void writeToSocket(int, string);
 	string processQueue();
 	void parseRows(XMLStorageObject*, XMLElement*);
 	void printStruct(XMLStorageObject*);
 	string createResponse(XMLStorageObject*);
-}
+	void error(const char *msg);
+};
