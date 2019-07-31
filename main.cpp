@@ -28,7 +28,7 @@ struct XMLStorageObject {
 };
 
 queue<XMLDocument*> workingQueue;
-int errFlag = 0, sockfd, newsockfd;
+int errFlag = 0, sockfd;
 
 void argumentError();
 void setServerAddress(int, char*[], string*, string*);
@@ -40,10 +40,10 @@ void parseRows(XMLStorageObject*, XMLElement*);
 void printStruct(XMLStorageObject*);
 string createResponse(XMLStorageObject*);
 
-void gracefullShutdown(int sigNum) {
+void closeSockets(int sigNum) {
 	// release sockets
-	close(newsockfd);
 	close(sockfd);
+	exit(sigNum);
 }
 
 void error(const char *msg) {
@@ -54,8 +54,8 @@ void error(const char *msg) {
 
 int main(int argc, char * argv[]) {
 
-	signal(SIGINT, gracefullShutdown);
-	signal(SIGTERM, gracefullShutdown);
+	signal(SIGINT, closeSockets);
+	signal(SIGTERM, closeSockets);
 
 
 	string serverIp = "127.0.0.1", serverPort = "5000";
@@ -113,7 +113,7 @@ void setServerAddress(int argc, char * argv[], string* serverIp, string* serverP
 	- releases memory and closes sockets
 */
 void runServer(int argc, string serverIp, int passedPortNo) {
-	int portno;
+	int newsockfd, portno;
 	socklen_t clilen;
 	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
@@ -146,18 +146,16 @@ void runServer(int argc, string serverIp, int passedPortNo) {
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 		error("ERROR on binding");
 	}
-	
-	listen(sockfd,5);
-	clilen = sizeof(cli_addr);
-	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-	if (newsockfd < 0) {
-		error("ERROR on accept");
-	}
 
 	while(1) {
-			// read from socket
+		listen(sockfd,5);
+		clilen = sizeof(cli_addr);
+		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		if (newsockfd < 0) {
+			error("ERROR on accept");
+		}
+		// read from socket
 		tempString = readFromSocket(newsockfd);
-	
 		// determine if data is valid XML
 	
 		// parse XML
@@ -182,10 +180,11 @@ void runServer(int argc, string serverIp, int passedPortNo) {
 	
 		// cleanup memory
 		delete doc;
+		// close client socket
+		close(newsockfd);
 	}
 
 	// release socket descriptors
-	close(newsockfd);
 	close(sockfd);
 }
 
@@ -297,10 +296,4 @@ string createResponse(XMLStorageObject *obj) {
 					"<\\response>\n";
 
 	return temp;
-}
-
-void gracefullShutdown(int sigNum) {
-	// release sockets
-	close(newsockfd);
-	close(sockfd);
 }
