@@ -7,12 +7,18 @@
 
 using namespace std;
 
-server::server() {
-	
+queue<XMLDocument*> *workingQueue;
+
+Server::Server() {
+	errFlag = 0;
+}
+
+Server::~Server() {
+
 }
 
 // displayes correct commandline usage and exits application
-void server::argumentError() {
+void Server::argumentError() {
 	cout << "Usage: \"main -i IP -p Port\"\nOmit either or both for default values" << endl;
 	exit(1);
 }
@@ -26,7 +32,7 @@ void server::argumentError() {
 	- sends response XML to client
 	- releases memory and closes sockets
 */
-void server::runServer(int argc, string serverIp, int passedPortNo) {
+void Server::runServer(string serverIp, int passedPortNo) {
 	int clientSockFD, portno;
 	socklen_t clilen;
 	char buffer[256];
@@ -106,7 +112,7 @@ void server::runServer(int argc, string serverIp, int passedPortNo) {
 }
 
 // reads from socket clientSockFD and returns results as a string
-string server::readFromSocket(int inputNewsockfd) {
+string Server::readFromSocket(int inputNewsockfd) {
 	int n, bufferSize = 256;
 	char buffer[bufferSize];
 	string tempString = "";
@@ -122,7 +128,7 @@ string server::readFromSocket(int inputNewsockfd) {
 }
 
 // writes output to the socket with clientSockFD
-void server::writeToSocket(int inputNewsockfd, string output) {
+void Server::writeToSocket(int inputNewsockfd, string output) {
 	int n;
 	output += "\n";
 	n = write(inputNewsockfd,output.c_str(),output.size());
@@ -133,7 +139,7 @@ void server::writeToSocket(int inputNewsockfd, string output) {
 }
 
 // method to process the workingQueue, errors if command or data tag missing
-string server::processQueue() {
+string Server::processQueue() {
 	// read from workingQueue
 	XMLDocument* tempDoc = workingQueue.front();
 	workingQueue.pop();
@@ -171,7 +177,7 @@ string server::processQueue() {
 }
 
 // method to parse rows of XMLElement storing key:value pair in XMLStorageObject map
-void parseRows(XMLStorageObject *obj, XMLElement *row) {
+void Server::parseRows(XMLStorageObject *obj, XMLElement *row) {
 	if (row == NULL) {
 		return;
 	}
@@ -197,7 +203,7 @@ void server::printStruct(XMLStorageObject *obj) {
 }
 
 // method to create response xml string from XMLStorageObject
-string server::createResponse(XMLStorageObject *obj) {
+string Server::createResponse(XMLStorageObject *obj) {
 	time_t rawtime;
 	struct tm * timeinfo;
 	char buffer [80];

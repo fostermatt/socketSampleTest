@@ -22,9 +22,11 @@
 
 using namespace std;
 
-class server {
-public: 
-	void runServer(int, string, int);
+class Server {
+public:
+	server();
+	~server();
+	void runServer(string, int);
 	void stopServer();
 private:
 	struct XMLStorageObject {
@@ -32,8 +34,8 @@ private:
 		map<string, string> data;
 	};
 
-	queue<XMLDocument*> workingQueue;
-	int errFlag = 0, sockfd;
+	int errFlag;
+	int sockfd;
 
 	void argumentError();
 	string readFromSocket(int);

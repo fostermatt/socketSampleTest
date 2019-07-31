@@ -31,16 +31,13 @@ int main(int argc, char * argv[]) {
 	// Validate commandline inputs and set server IP and port
 	setServerAddress(argc, argv, &serverIp, &serverPort);
 	cout << "Starting Server at " << serverIp << ":" << serverPort << endl;
-	// Open socket, listen for data
 
 	int portNo = stoi(serverPort);
-
-	runServer(2, serverIp, portNo);
+	Server myServer;
+	myServer.runServer(serverIp, portNo);
 	
 	return 0;
 }
-
-
 
 // validates commandline input and sets IP and Port when appropriate
 void setServerAddress(int argc, char * argv[], string* serverIp, string* serverPort){
