@@ -19,8 +19,8 @@ public:
 	void runServer(string, int);
 	void stopServer();
 private:
-	struct XMLStorageObject {
-		string command;
+	struct Command {
+		string name;
 		map<string, string> data;
 	};
 
@@ -30,8 +30,8 @@ private:
 	string readFromSocket(int);
 	void writeToSocket(int, string);
 	string processQueue();
-	void parseRows(XMLStorageObject*, XMLElement*);
-	void printStruct(XMLStorageObject*);
-	string createResponse(XMLStorageObject*);
+	void parseRows(Command*, XMLElement*);
+	void printStruct(Command*);
+	string createResponse(Command*);
 	void error(const char *msg);
 };

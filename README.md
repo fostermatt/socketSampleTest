@@ -1,5 +1,5 @@
 # Socket Sample Test
-# Table of Contents
+## Table of Contents
 1. [Test Summary](README.md#test-summary)
 2. [Running Instructions](README.md#test-summary)
 3. [Implementation](README.md#test-summary)
@@ -68,6 +68,6 @@ cat FILE.xml | netcat IPADDRESS PORT
 [Back to Table of Contents](README.md#table-of-contents)
 ## Comments
 [Back to Table of Contents](README.md#table-of-contents)
-## Contact
+## Contact  
 [Back to Table of Contents](README.md#table-of-contents)
 [matt@fostermatt.com](mailto:matt@fostermatt.com)

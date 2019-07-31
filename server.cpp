@@ -153,7 +153,7 @@ string Server::processQueue() {
 	// read from workingQueue
 	XMLDocument* tempDoc = workingQueue.front();
 	workingQueue.pop();
-	XMLStorageObject tempObj;
+	Command tempObj;
 
 	// break the doc into struct
 		// process input command
@@ -163,7 +163,7 @@ string Server::processQueue() {
 		errFlag = 1;
 		return "Unknown Command";
 	} else {
-		tempObj.command = getCommand->GetText();
+		tempObj.name = getCommand->GetText();
 	}
 		// process input data
 	XMLElement* getData = tempDoc->FirstChildElement()->FirstChildElement( "data" );
@@ -186,8 +186,8 @@ string Server::processQueue() {
 	return responseStr;
 }
 
-// method to parse rows of XMLElement storing key:value pair in XMLStorageObject map
-void Server::parseRows(XMLStorageObject *obj, XMLElement *row) {
+// method to parse rows of XMLElement storing key:value pair in Command map
+void Server::parseRows(Command *obj, XMLElement *row) {
 	if (row == NULL) {
 		return;
 	}
@@ -195,14 +195,14 @@ void Server::parseRows(XMLStorageObject *obj, XMLElement *row) {
 	const char *key;
 	row->QueryStringAttribute( "type", &key);
 	const char * val = row->GetText();
-	obj->data.emplace(key, val);
+	obj->data[key] = val;
 
 	parseRows(obj, row->NextSiblingElement());
 }
 
-// method to print XMLStorageObject to console
-void Server::printStruct(XMLStorageObject *obj) {
-	cout << "Command: " << obj->command << endl;
+// method to print Command to console
+void Server::printStruct(Command *obj) {
+	cout << "Command: " << obj->name << endl;
 
 	cout << "Data:" << endl;
 	for(map<string, string>::iterator it = obj->data.begin(); it != obj->data.end(); it++) {
@@ -212,8 +212,8 @@ void Server::printStruct(XMLStorageObject *obj) {
 	cout << endl;
 }
 
-// method to create response xml string from XMLStorageObject
-string Server::createResponse(XMLStorageObject *obj) {
+// method to create response xml string from Command
+string Server::createResponse(Command *obj) {
 	time_t rawtime;
 	struct tm * timeinfo;
 	char buffer [80];
@@ -223,7 +223,7 @@ string Server::createResponse(XMLStorageObject *obj) {
 	strftime (buffer,80,"%F %X",timeinfo);
 	string dt = buffer;
 
-	string temp = 	"<response>\n\t<command>" + obj->command + "<\\command>\n" +
+	string temp = 	"<response>\n\t<command>" + obj->name + "<\\command>\n" +
 						"\t<status>Complete<\\status>\n" +
 						"\t<date>" + dt + "<\\date>\n" +
 					"<\\response>\n";
