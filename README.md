@@ -13,15 +13,37 @@
 3) Source, makefiles, and documentation are expected
 
 ### Task Description:
-1. Create a simple OO server program. The server shoudl accept client connections, receive XML data on that connection, display the contents of the XML message, and send a response back to the client. The server should have the following characteristics:
- a. Take the address and port information as commandline parameters that default to 127.0.0.1 and port 5000  
- b. Open a socket and listen for incoming data  
- c. Receive data and determine if it is valid XML  
-  i.  If it is XML, pass to a work queue that "processes" the command  
-  ii. Invalid XML should result in a display of "Unknown Command"  
- d. Parse the command and display it to the console with any data rows  
- e. Send a response to the originating socket  
-2. The client simply intiates a connection, sends an XML packet, and displays the server's response. The client could be a simple shell script using netcat or a small program to send an XML message (from a text file) to the socket server monitor.
+1. Create a simple OO server program. The server shoudl accept client connections, receive XML data on that connection, display the contents of the XML message, and send a response back to the client. The server should have the following characteristics:  
+     a. Take the address and port information as commandline parameters that default to 127.0.0.1 and port 5000  
+     b. Open a socket and listen for incoming data  
+     c. Receive data and determine if it is valid XML  
+        - If it is XML, pass to a work queue that "processes" the command  
+        - Invalid XML should result in a display of "Unknown Command"  
+     d. Parse the command and display it to the console with any data rows  
+     e. Send a response to the originating socket  
+2. The client simply intiates a connection, sends an XML packet, and displays the server's response. The client could be a simple shell script using netcat or a small program to send an XML message (from a text file) to the socket server monitor.  
+### Example:  
+A sample valid XML message will be in the following format:  
+(Request)
+```
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<request>
+  <command>Print</command>
+  <data>
+     <row type="name">Mr. Joe Chase</row>
+     <row type="address">123 Anywhere Lane</row>
+  </data>
+</request>
+```
+(Response)  
+```
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<response>
+  <command>Print</command>
+  <status>Complete</status>
+  <date>1970-01-01 00:00:00</date>
+</response>
+```
 ## Running Instructions
 [Back to Table of Contents](README.md#table-of-contents)
 ### Usage
@@ -29,7 +51,7 @@ Once compiled the executable will run as follows:
 ```
 ./main -i 127.0.0.1 -p 5000
 ```
-
+Either or both the IP address or port number can be omitted which will result in the default value being used.
 ## Implementation
 [Back to Table of Contents](README.md#table-of-contents)
 ## Comments
